@@ -1,0 +1,14 @@
+# Virtual Environment
+venv/
+env/
+__pycache__/
+
+# Environment Variables (DO NOT COMMIT)
+.env
+
+# MacOS
+.DS_Store
+
+# Temporary audio files
+*.mp3
+*.wav
