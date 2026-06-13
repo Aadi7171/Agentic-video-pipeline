@@ -49,8 +49,8 @@ agentic-video-pipeline/
 
 #### **1. Clone the repository**
 ```bash
-git clone https://github.com/your-username/agentic-video-pipeline.git
-cd agentic-video-pipeline
+git clone https://github.com/Aadi7171/Agentic-video-pipeline.git
+cd Agentic-video-pipeline
 ```
 
 #### **2. Install Dependencies**
