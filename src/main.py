@@ -16,19 +16,21 @@ def main(prompt: str):
         return
     print(f"✅ Generated {len(script_json)} scenes.")
 
-    # 2. Voice Agent (per-scene gTTS -> measured durations -> VideoDB)
-    print("\n🎙️ [Agent 2] Voice Agent synthesizing per-scene audio...")
-    script_json = generate_voiceover(script_json)
+    # 2. Voice Agent (gTTS -> VideoDB). Returns (voice_id, transcript).
+    print("\n🎙️ [Agent 2] Voice Agent synthesizing audio...")
+    voice_id, transcript = generate_voiceover(script_json)
+    if not voice_id:
+        print("⚠️ Voiceover generation failed. Continuing without audio.")
 
-    # 3. Asset Agent (Pexels -> VideoDB)
+    # 3. Asset Agent (Pexels -> VideoDB). Returns updated scenes.
     print("\n🎞️ [Agent 3] Asset Agent fetching scene media...")
     script_json = fetch_assets(script_json)
 
-    # 4. Editor Agent (VideoDB Timeline, true A/V sync)
+    # 4. Editor Agent (VideoDB Timeline). Needs scenes AND the voice_id.
     print("\n✂️ [Agent 4] Editor Agent cutting the timeline...")
-    final_video_url = render_video(script_json)
+    final_video_url = render_video(script_json, voice_id)
 
-    if final_video_url:
+    if final_video_url and final_video_url != "ERROR_GENERATING_URL":
         print("\n--- 🍿 PRODUCTION COMPLETE ---")
         print(f"📺 Watch your video here: {final_video_url}")
     else:
