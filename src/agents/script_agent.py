@@ -1,9 +1,35 @@
 import json
+from jsonschema import validate, ValidationError
 from config import get_gemini
+
+# Formal contract every scene from the Scriptwriter Agent must satisfy.
+# Validating against this catches malformed model output at the source,
+# before it can corrupt the Voice, Asset, or Editor stages downstream.
+SCRIPT_SCHEMA = {
+    "type": "array",
+    "minItems": 1,
+    "items": {
+        "type": "object",
+        "required": ["id", "narrator", "visual_keyword", "estimated_duration"],
+        "properties": {
+            "id": {"type": "integer"},
+            "narrator": {"type": "string", "minLength": 1},
+            "visual_keyword": {"type": "string", "minLength": 1},
+            # Gemini returns this as a string (e.g. "4"); keep it permissive
+            # but require a value the Editor can cast to a number.
+            "estimated_duration": {"type": ["string", "number"]},
+        },
+        "additionalProperties": True,
+    },
+}
 
 
 def generate_script(prompt: str) -> list:
-    """Uses Gemini to generate a structured script JSON."""
+    """Uses Gemini to generate a structured script, validated against SCRIPT_SCHEMA.
+
+    Returns a list of validated scene dicts, or [] if generation, parsing,
+    or schema validation fails.
+    """
     client = get_gemini()
 
     system_instruction = """
@@ -29,14 +55,21 @@ Format:
         }
     )
 
+    # 1. Parse — strip any accidental markdown fences first
     try:
-        # Clean any accidental markdown fences
         text = response.text.replace('```json', '').replace('```', '').strip()
         script_data = json.loads(text)
-        if not isinstance(script_data, list):
-            print("Gemini did not return a JSON array.")
-            return []
-        return script_data
-    except Exception as e:
-        print(f"Failed to parse Gemini script: {e}")
+    except (json.JSONDecodeError, AttributeError) as e:
+        print(f"   -> Failed to parse Gemini response as JSON: {e}")
         return []
+
+    # 2. Validate against the schema — fail fast with a clear message
+    try:
+        validate(instance=script_data, schema=SCRIPT_SCHEMA)
+    except ValidationError as e:
+        # e.message is human-readable; e.json_path shows exactly where it broke
+        print(f"   -> Script failed schema validation at {e.json_path}: {e.message}")
+        return []
+
+    print(f"   -> Script validated against schema ({len(script_data)} scenes).")
+    return script_data
